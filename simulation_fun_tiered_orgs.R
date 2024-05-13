@@ -8,35 +8,33 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,3), n_orgs, prop_a_t1
   org_size  <- sum(org_srtucture)
   # total number of cells in the 'labor market'
   n <- org_size * n_orgs
-  # proportion of each tier in the organizations
-  prop_t1   <- org_srtucture[1] / org_size
-  prop_t2   <- org_srtucture[2] / org_size
-  prop_t3   <- org_srtucture[3] / org_size
+  # total number of each tier in the organizations (ex. org=13, n_org = 10 -> n_t3 = 130*9/13 = 90)
+  n_t1 <- (n * org_srtucture[1]) / org_size
+  n_t2 <- (n * org_srtucture[2]) / org_size
+  n_t3 <- (n * org_srtucture[3]) / org_size
   
-  # number of each agent type + empty cells. Calculated by multiplying the proportion of the tier out of total, 
+  # number of each agent type + empty cells. Calculated by multiplying the number of agents in a tier 
   # by the proportion of the agent type out of the tier, multiplied by 1 - the proportion of empty cells. 
   # Finally, the result is rounded to the closest agent (no half agents ;))
-  n_a1 <- round(n * prop_a_t1 * prop_t1 * (1 - prop_empty))
-  n_a2 <- round(n * prop_a_t2 * prop_t2 * (1 - prop_empty))
-  n_a3 <- round(n * prop_a_t3 * prop_t3 * (1 - prop_empty))
-  n_b1 <- round(n * prop_b_t1 * prop_t1 * (1 - prop_empty))
-  n_b2 <- round(n * prop_b_t2 * prop_t2 * (1 - prop_empty))
-  n_b3 <- round(n * prop_b_t3 * prop_t3 * (1 - prop_empty))
-  n_empty <- n - (n_a1 + n_a2 + n_a3 + n_b1 + n_b2 + n_b3)
+  n_a1 <- round(prop_a_t1 * n_t1 * (1 - prop_empty))
+  n_a2 <- round(prop_a_t2 * n_t2 * (1 - prop_empty))
+  n_a3 <- round(prop_a_t3 * n_t3 * (1 - prop_empty))
+  n_b1 <- round(prop_b_t1 * n_t1 * (1 - prop_empty))
+  n_b2 <- round(prop_b_t2 * n_t2 * (1 - prop_empty))
+  n_b3 <- round(prop_b_t3 * n_t3 * (1 - prop_empty))
+  n_empty1 <- n_t1 - (n_a1 + n_b1)
+  n_empty2 <- n_t2 - (n_a2 + n_b2)
+  n_empty3 <- n_t3 - (n_a3 + n_b3)
   
   # create randomized vectors of agents based on the proportion of each type
-  agents_t1 <- 
-  agents_t2
-  agents_t3
+  agents_t1 <- sample(c(rep("A1", n_a1), rep("B1", n_b1), rep("empty", n_empty1)))
+  agents_t2 <- sample(c(rep("A2", n_a2), rep("B2", n_b2), rep("empty", n_empty1)))
+  agents_t3 <- sample(c(rep("A3", n_a3), rep("B3", n_b3), rep("empty", n_empty3)))
   
-  _types <- c(rep("A1", n_a1), rep("A2", n_a2), rep("A3", n_a3),
-                   rep("B1", n_b1), rep("B2", n_b2), rep("B3", n_b3),
-                   rep("empty", n_empty))
-  # randomize it
-  agent_types <- sample(agent_types)
-  
-  # set organizational ids
+  # set organizational ids (if org size is 13, than repeat each id 13 times)
   org_names <- rep(1:n_orgs, each = org_size)
+  
+  #########################we now need to take 1 of agents_t1, 3 of agents_t2 and 9 (or 3) of agents_t3, and repeat that!!!!
   
   # create and return an agent data frame
   agents <- data.frame(
@@ -44,30 +42,5 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,3), n_orgs, prop_a_t1
     type = agent_types,
     org  = org_names 
     
-  )
-}
-
-
-function(grid_size, prop_a, prop_b, prop_empty = 0.05, exact = TRUE) {
-  #number of cells
-  n <- grid_size^2
-  #number of agents and empty cells
-  n_a <- round(n * prop_a * (1 - prop_empty))
-  n_b <- round(n * prop_b * (1 - prop_empty))
-  n_empty <- n - n_a - n_b
-  
-  if(exact) { 
-    agent_types <- sample(c(rep("A", n_a), rep("B", n_b), rep("empty", n_empty)))
-  } else {
-    agent_types <- sample(c("A", "B", "empty"), n, replace = TRUE, prob = c(prop_a, prop_b, 1-prop_a-prop_b))
-  }
-  
-  agents <- data.frame(
-    id = 1:n,
-    type = agent_types,
-    x = rep(1:grid_size, grid_size),
-    y = rep(seq(1, grid_size), each = grid_size)
   ) %>% mutate(id = if_else(type == "empty", NA, id))
-  
-  return(agents)
 }
