@@ -3,15 +3,19 @@
 ### indicated by the organizational size and number or orgs, ands isn't a square.
 initialize_agents_tiered <- function(org_srtucture = c(1,3,3), n_orgs, prop_a_t1, prop_a_t2, prop_a_t3, 
                                      prop_b_t1, prop_b_t2, prop_b_t3, prop_empty = 0.05, exact_prop = TRUE) {
+  # the size of each tier (one manager per org => size_t1 == 1)
+  size_t1 <- org_srtucture[1]
+  size_t2 <- org_srtucture[2]
+  size_t3 <- org_srtucture[3]
   
   # number of people in the organization
   org_size  <- sum(org_srtucture)
   # total number of cells in the 'labor market'
   n <- org_size * n_orgs
   # total number of each tier in the organizations (ex. org=13, n_org = 10 -> n_t3 = 130*9/13 = 90)
-  n_t1 <- (n * org_srtucture[1]) / org_size
-  n_t2 <- (n * org_srtucture[2]) / org_size
-  n_t3 <- (n * org_srtucture[3]) / org_size
+  n_t1 <- (n * size_t1) / org_size
+  n_t2 <- (n * size_t2) / org_size
+  n_t3 <- (n * size_t3) / org_size
   
   # number of each agent type + empty cells. Calculated by multiplying the number of agents in a tier 
   # by the proportion of the agent type out of the tier, multiplied by 1 - the proportion of empty cells. 
@@ -34,7 +38,19 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,3), n_orgs, prop_a_t1
   # set organizational ids (if org size is 13, than repeat each id 13 times)
   org_names <- rep(1:n_orgs, each = org_size)
   
-  #########################we now need to take 1 of agents_t1, 3 of agents_t2 and 9 (or 3) of agents_t3, and repeat that!!!!
+  # take 1 of agents_t1, 3 of agents_t2 and 9 (or 3) of agents_t3, and repeat that
+  agent_types <- character()
+  
+  for(i in 1:n_orgs) {
+    # when tier1 is index (iteration / org number) i, what is the beginning index of tier 2 and 3?
+    indx_t2 <- ((i-1) * size_t2) + 1
+    indx_t3 <- ((i-1) * size_t3) + 1
+    
+    agent_types <- c(agent_types, 
+                     agents_t1[i],
+                     agents_t2[indx_t2:(indx_t2 + size_t2 - 1)],
+                     agents_t3[indx_t3:(indx_t3 + size_t3 - 1)])
+  }
   
   # create and return an agent data frame
   agents <- data.frame(
@@ -43,4 +59,6 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,3), n_orgs, prop_a_t1
     org  = org_names 
     
   ) %>% mutate(id = if_else(type == "empty", NA, id))
+  
+  return(agent_types)
 }
