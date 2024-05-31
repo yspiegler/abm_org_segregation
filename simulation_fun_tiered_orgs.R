@@ -66,7 +66,7 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,9), n_orgs, prop_a_t1
     tier = rep(c(rep(1, size_t1), rep(2, size_t2), rep(3, size_t3)), n_orgs),
     vert_group = rep(c(rep(0, size_t1), 1:size_t2, rep(1:size_t2, size_t3/size_t2)), n_orgs),
     org  = org_names, 
-    n_moves = 0
+    n_stay = 0 #number of times in a row the agent chose not to move
   ) %>% mutate(type = if_else(type == "e", "empty", type))
   
   return(agents)
@@ -75,8 +75,8 @@ initialize_agents_tiered <- function(org_srtucture = c(1,3,9), n_orgs, prop_a_t1
 # get the correct agent group that  is hierarchically relevant to a specific agent. 
 # Example - a tier 3 agent of vertical group 1 should get their peers (all t3 agents) + 
 # their direct manager (the t2 group 1 agent) [V]
-get_rel_hierarchy <- function(agents, agent_id, summarize_data = TRUE) {
-  agent <- agents %>% filter(id == agent_id)
+get_rel_hierarchy <- function(agents, agent, summarize_data = TRUE) {
+  agent_id    <- agent$position_id
   agent_tier  <- agent$tier
   agent_group <- agent$vert_group
   agent_org   <- agent$org
@@ -109,7 +109,7 @@ get_rel_hierarchy <- function(agents, agent_id, summarize_data = TRUE) {
   # spot), remove the tier entirely.
   # Return full agent data if summarize_data is FALSE
   if (summarize_data) {
-    rh <- rh %>% filter(id != agent_id) %>%
+    rh <- rh %>% filter(position_id != agent_id) %>%
       arrange(tier, type) %>%
       group_by(tier) %>%
       summarize(composition = case_when(all(type %in% c("A", "empty")) & any(type == "A") ~ "just_a",
@@ -157,21 +157,37 @@ calc_dissimilarity <- function(agents, calc_tier = NA) {
 }
 
 
-move_agent <- function(agents, agent_id, open_id) {
+move_agent <- function(agents, agent, position) {
   
-  #get agent and position data
-  agent <- agents %>% filter(position_id == agent_id)
-  position <- agents %>% filter(position_id == agent_id)
+  #get surrounding workers in org hierarchy [v]
+  neighbors_0 <- get_rel_hierarchy(agents, agent)
+  neighbors_1 <- get_rel_hierarchy(agents, position)
   
-  #get surrounding workers in org hierarchy
-  neighbors_0 <- get_rel_hierarchy(agents, agent$tier,    agent$group,    agent$org)
-  neighbors_1 <- get_rel_hierarchy(agents, position$tier, position$group, position$org)
-  
+  #make a choice - stay, or move
   choice <- choose_position(agent$type, agent$tier, neighbors_0, neighbors_1)
   
+  agt_id <- agent$position_id
+  pos_id <- position$position_id
   
+  # if agent chose to stay, just increase the n_stay counter by 1
+  if (choice == "stay") {
+    agents <- agents %>% mutate(n_stay = if_else(position_id == agt_id, n_stay + 1, n_stay))
+  }
+  # I know 'else' if a bit move efficient here in R, but this is move readable
+  if (choice == "move") {
+    agt_type <- agent$type
+    
+    agents <- agents %>% mutate(n_stay = if_else(position_id == agt_id, 0, n_stay), #reset stay number to 0
+                                type   = case_when(position_id == agt_id ~ "empty",    #turn original position to empty
+                                                   position_id == pos_id  ~ agt_type, #move agent type to new spot
+                                                   TRUE ~ type))                         
+  }
+  
+  return(agents)
 }
 
+# give the agent type and tier, calculate the relative utilities of the current (h0) and offered (h1) positions
+# and make a choice = "stay" or "move" [v]
 choose_position <- function(agent_type, agent_tier, h0, h1) {
   #get relevant effects based on agent/position tier + agent type (A or B)
   # !!!!! NOTE::: this means that for a tier 3 agent, the relevant effects belong to t1 (manager) and t2 (peers)
@@ -189,13 +205,13 @@ choose_position <- function(agent_type, agent_tier, h0, h1) {
   } 
   
   ### for peers, t1 are managers, t2 are peers, and t3 are subordinates (no change)
-  if (agent_tier == 2) {
+  else if (agent_tier == 2) {
     eff <- effects %>% filter(type == agent_type)
   } 
   
   ### for subordinates, t3 are peers, and t2 is the manager.
-  ### so, the relevant effects are for manager and peers 
-  if (agent_tier == 3) {
+  ### so, the relevant effects are for manager and peers [v]
+  else if (agent_tier == 3) {
     eff <- effects %>% filter(tier %in% c(1, 2) & 
                                 type == agent_type)
     
@@ -227,8 +243,40 @@ choose_position <- function(agent_type, agent_tier, h0, h1) {
   return(choose)
 }
 
-# testing ---------------------------------------------------------------------------------------------------------
-effects <- read_csv(file = "conjoint_effects.csv")
+move_agents <- function(agents, happy_if_stayed = 3) {
+  
+  # get the ids of all non empty agents that are still looking to move
+  agent_ids <- agents %>% filter(type != "empty" & n_stay <= happy_if_stayed) %>% pull(position_id)
+  # randomize their movement order
+  agent_ids <- sample(agent_ids)
 
-a <- initialize_agents_tiered(c(1,3,9), 3, 0.6, 0.6, 0.6, 0.4, 0.4, 0.4, 0.1, TRUE)
-calc_dissimilarity(a, 3)
+  # if no more agents are left to move, return an empty data.frame
+  if (is_empty(agent_ids)) { 
+    return(data.frame()) 
+  }
+  
+  # loop over actual ids of agents to move and move them
+  for (i in agent_ids) {
+    agent <- agents[agents$position_id == i,]
+    agent_org <- agent$org
+    agent_tier <- agent$tier
+    # get random open position in another organization but same tier
+    position <- sample_n(agents %>% filter(type == "empty" & 
+                                           org != agent_org &
+                                           tier == agent_tier),
+                         1)
+
+    if (nrow(position) == 1){
+      agents <- move_agent(agents, agent, position)  
+    } else {
+      print(agent)
+      print(position)
+      stop()
+    }
+  }
+  
+  return(agents)
+}
+
+# testing ---------------------------------------------------------------------------------------------------------
+
