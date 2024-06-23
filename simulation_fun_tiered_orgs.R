@@ -5,7 +5,7 @@ library(stringr)
 ### or be hierarchical (like in the conjoint experiment). So the actual size of the grid should be 
 ### indicated by the organizational size and number or orgs, ands isn't a square. [V]
 initialize_agents_tiered <- function(org_srtucture = c(1,3,9), n_orgs, prop_a_t1, prop_a_t2, prop_a_t3, 
-                                     prop_b_t1, prop_b_t2, prop_b_t3, prop_empty = 0.05, exact_prop = TRUE) {
+                                     prop_b_t1, prop_b_t2, prop_b_t3, prop_empty = 0.1, exact_prop = TRUE) {
   # the size of each tier (one manager per org => size_t1 == 1)
   size_t1 <- org_srtucture[1]
   size_t2 <- org_srtucture[2]
@@ -133,8 +133,9 @@ calc_dissimilarity <- function(agents, calc_tier = NA) {
     stop()
   }
   
-  #get only the relevant tier . NA means total dissimilarity
-  if(calc_tier %in% c(1,2,3)) {
+  #NA (default) means the function will calculate overall dissimilarity between orgs.
+  #if calc_tier equals 2, or 3, this will calculate just the dissimilarity between orgs in that tier only.
+  if(calc_tier %in% c(2,3)) {
     agents <- agents %>% filter(tier == calc_tier)    
   }
   
@@ -156,15 +157,57 @@ calc_dissimilarity <- function(agents, calc_tier = NA) {
   return(numerator / denominator)
 }
 
+#Calculate H Theil index of segregation (based on Entropy)
+calc_theil <- function(agents) {
+  #create a small data for the organizations 
+  orgs <- agents %>% 
+    filter(type != "empty") %>%
+    group_by(org) %>%
+    summarise(total  = n(),
+              n_b    = sum(type=="B")) %>%
+    mutate(prop_b    = n_b / total)
+  
+  # step 1: calculate entropy for each organization
+  orgs$entropy <- lapply(orgs$prop_b, calc_entropy)
+  # step 2: calculate overall entropy score
+  n_workers <- sum(orgs$total)
+  E <- calc_entropy(sum(orgs$n_b) / n_workers)
+  
+  # step 3: calculate partial organizational Theil
+  orgs <- orgs %>%
+    mutate(partial_h = (total * (E - entropy)))
+  
+  # step 4: calc the Market (overall) Theil index
+  H <- (1 / (n_workers * E)) * sum(orgs$partial_h)
+  
+  return(H)
+}
 
-move_agent <- function(agents, agent, position) {
+# calculate entropy index for a single unit with two groups (e.g., Black and White people) [v]
+calc_entropy <- function(prop) {
+  
+  if(prop == 1 | prop == 0) {
+    return(0)
+  } else {
+    return((prop * log(1 / prop)) + 
+          ((1 - prop) * log(1 / (1 - prop))))
+  }
+}
+
+move_agent <- function(agents, agent, position, have_preference = TRUE) {
   
   #get surrounding workers in org hierarchy [v]
   neighbors_0 <- get_rel_hierarchy(agents, agent)
   neighbors_1 <- get_rel_hierarchy(agents, position)
   
   #make a choice - stay, or move
-  choice <- choose_position(agent$type, agent$tier, neighbors_0, neighbors_1)
+  
+  if (have_preference) {
+    choice <- choose_position(agent$type, agent$tier, neighbors_0, neighbors_1)  
+  } else {
+    choice <- sample(c("stay", "move"), 1)
+  }
+  
   
   agt_id <- agent$position_id
   pos_id <- position$position_id
@@ -243,7 +286,7 @@ choose_position <- function(agent_type, agent_tier, h0, h1) {
   return(choose)
 }
 
-move_agents <- function(agents, happy_if_stayed = 3) {
+move_agents <- function(agents, happy_if_stayed = 3, have_prerefernce = TRUE) {
   
   # get the ids of all non empty agents that are still looking to move
   agent_ids <- agents %>% filter(type != "empty" & n_stay <= happy_if_stayed) %>% pull(position_id)
@@ -267,7 +310,7 @@ move_agents <- function(agents, happy_if_stayed = 3) {
                          1)
 
     if (nrow(position) == 1){
-      agents <- move_agent(agents, agent, position)  
+      agents <- move_agent(agents, agent, position, have_prerefernce)  
     } else {
       print(agent)
       print(position)
@@ -277,6 +320,8 @@ move_agents <- function(agents, happy_if_stayed = 3) {
   
   return(agents)
 }
+
+
 
 # testing ---------------------------------------------------------------------------------------------------------
 
