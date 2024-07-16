@@ -1,8 +1,14 @@
 library(ggplot2)
 library(geomtextpath)
 
+######################################################
+######################################################
+#  NEED TO FIX / STREAMLINE TEXT FONT SIZES IN PLOTS #
+######################################################
+######################################################
 
-plot_sim_batch <- function(batch, agent_ratio_str) {
+# plot simulation batch of any number as the change in Dissimilarity segregation score as a function of sim iterations
+plot_batch_dissimilarity <- function(batch, agent_ratio_str) {
   
   combined_df <- map2_df(batch, seq_along(batch), 
                          ~ .x %>%
@@ -29,7 +35,7 @@ plot_sim_batch <- function(batch, agent_ratio_str) {
                            stat = "smooth",
                            color = "violetred4",
                            family = "Roboto",
-                           size = 3.5,
+                           size = 5,
                            hjust = 0.8) +
             labs(x = "Iteration", y = "Dissimilarity", 
                  title = "Dissimilarity over time",
@@ -38,14 +44,17 @@ plot_sim_batch <- function(batch, agent_ratio_str) {
             theme_minimal() + 
             theme(legend.position = "none",
                   text = element_text(family = "Roboto"),
-                  plot.title = element_text(face = "bold",
-                                            size = rel(1.5)),
-                  axis.text = element_text(family = "Roboto")) + 
+                  plot.title = element_text(face = "bold",  size = 20),
+                  plot.subtitle = element_text(size = 14),
+                  axis.text = element_text(family = "Roboto", size = 12),
+                  axis.title = element_text(size = 16)) + 
             ylim(0.15, 0.35)
+  
+  return(p)
 }
 
-
-plot_sim_batch_theil <- function(batch, agent_ratio_str) {
+# plot simulation batch of any number as the change in Theil segregation score as a function of sim iterations 
+plot_batch_theil <- function(batch, agent_ratio_str) {
   
   combined_df <- map2_df(batch, seq_along(batch), 
                          ~ .x %>%
@@ -55,7 +64,8 @@ plot_sim_batch_theil <- function(batch, agent_ratio_str) {
     ungroup() %>%
     filter(iteration > 1) %>%
     group_by(sim_id) %>%
-    mutate(theil_increased = as.factor(if_else(first(theil_overall) < last(theil_overall), "h_increased", "h_decreased")))
+    mutate(theil_increased = as.factor(if_else(first(theil_overall) < 
+                                                last(theil_overall), "h_increased", "h_decreased")))
   
   #calculate mean initial (t0) and final (t1) theil
   theil_t0 <- mean(filter(combined_df, iteration == 2)$theil_total)
@@ -87,3 +97,5 @@ plot_sim_batch_theil <- function(batch, agent_ratio_str) {
           axis.text = element_text(family = "Roboto")) + 
     ylim(0.025, 0.125)
 }
+
+

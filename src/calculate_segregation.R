@@ -36,7 +36,9 @@ calc_dissimilarity <- function(agents, calc_tier = NA) {
   return(numerator / denominator)
 }
 
-#Calculate H Theil index of segregation (based on Entropy) [v]
+# Calculate H Theil index of segregation (based on Entropy) [v]
+### NOTE: the values seem low, but Theil isn't an easily interpretable scale. But for context, 
+###       in Ferguson & Koenig (2018), the overall Theil score of between-firm segregation is around 0.17
 calc_theil <- function(agents) {
   #create a small data for the organizations 
   orgs <- agents %>% 

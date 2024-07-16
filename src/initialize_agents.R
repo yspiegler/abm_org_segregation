@@ -1,7 +1,6 @@
 library(stringr)
 
 
-
 ### in this version of the simulation, organizations are much more flexible. They can be of any size,
 ### or be hierarchical (like in the conjoint experiment). So the actual size of the grid should be 
 ### indicated by the organizational size and number or orgs, ands isn't a square. [V]
