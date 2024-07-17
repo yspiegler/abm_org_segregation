@@ -67,10 +67,12 @@ plot_batch_theil <- function(batch, agent_ratio_str) {
                                                 last(theil_overall), "h_increased", "h_decreased")))
   
   #calculate mean initial (t0) and final (t1) theil
-  (theil_t0) <- mean(filter(combined_df, iteration == 2)$theil_total)
-  (theil_t1) <- mean(filter(combined_df, iteration == max(iteration))$theil_total)
+  theil_t0 <- mean(filter(combined_df, iteration == 2)$theil_total)
+  theil_t1 <- mean(filter(combined_df, iteration == max(iteration))$theil_total)
   #calculate the % difference, round to 2 decimals, and add a '+' sign if the number is positive
-  (theil_diff) <- str_replace(str_c(round(100*((theil_t1-theil_t0)/theil_t0), 2), "%"), "^(?=[0-9])", "+")
+  theil_diff <- str_replace(str_c(round(100*((theil_t1-theil_t0)/theil_t0), 2), "%"), "^(?=[0-9])", "+")
+  
+  print(str_c(theil_diff, " <- diff, t0 -> ", theil_t0, " and theil t1 -> ", theil_t1))
   
   #DO THE PLOTTING! :)
   p <- ggplot(combined_df, aes(x = iteration, y = theil_total)) + 
