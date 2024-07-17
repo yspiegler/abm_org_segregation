@@ -29,14 +29,14 @@ plot_batch_dissimilarity <- function(batch, agent_ratio_str) {
   p <-  ggplot(combined_df, aes(x = iteration, y = dissimilarity_total)) + 
             geom_line(aes(y = dis_overall, group = sim_id, color = dissimilarity_increased), alpha = 0.45) +
             scale_color_manual(values = c("d_increased" = "steelblue4", "d_decreased" = "tomato")) + 
-            geom_line(linewidth = 2, alpha = 0.75) +
-            geom_labelpath(linewidth = 1.5,
-                           label = str_c("MEAN CHANGE: ", diss_diff), 
+            #geom_line(linewidth = 2, alpha = 0.75) +
+            geom_textpath(linewidth = 1.5,
+                           label = str_c("mean change: ", diss_diff), 
                            stat = "smooth",
-                           color = "violetred4",
+                           color = "black",
                            family = "Roboto",
-                           size = 5,
-                           hjust = 0.8) +
+                           size = 4,
+                           hjust = 0.25) +
             labs(x = "Iteration", y = "Dissimilarity", 
                  title = "Dissimilarity over time",
                  subtitle = str_c("Change in segregation between 100 organizations time with an agent (A/B) ratio of ", agent_ratio_str,
@@ -44,11 +44,10 @@ plot_batch_dissimilarity <- function(batch, agent_ratio_str) {
             theme_minimal() + 
             theme(legend.position = "none",
                   text = element_text(family = "Roboto"),
-                  plot.title = element_text(face = "bold",  size = 20),
-                  plot.subtitle = element_text(size = 14),
-                  axis.text = element_text(family = "Roboto", size = 12),
-                  axis.title = element_text(size = 16)) + 
-            ylim(0.15, 0.35)
+                  plot.title = element_text(face = "bold",
+                                            size = rel(1.5)),
+                  axis.text = element_text(family = "Roboto")) + 
+                    ylim(0.15, 0.35)
   
   return(p)
 }
@@ -68,34 +67,59 @@ plot_batch_theil <- function(batch, agent_ratio_str) {
                                                 last(theil_overall), "h_increased", "h_decreased")))
   
   #calculate mean initial (t0) and final (t1) theil
-  theil_t0 <- mean(filter(combined_df, iteration == 2)$theil_total)
-  theil_t1 <- mean(filter(combined_df, iteration == max(iteration))$theil_total)
+  (theil_t0) <- mean(filter(combined_df, iteration == 2)$theil_total)
+  (theil_t1) <- mean(filter(combined_df, iteration == max(iteration))$theil_total)
   #calculate the % difference, round to 2 decimals, and add a '+' sign if the number is positive
-  theil_diff <- str_replace(str_c(round(100*((theil_t1-theil_t0)/theil_t0), 2), "%"), "^(?=[0-9])", "+")
+  (theil_diff) <- str_replace(str_c(round(100*((theil_t1-theil_t0)/theil_t0), 2), "%"), "^(?=[0-9])", "+")
   
   #DO THE PLOTTING! :)
-  ggplot(combined_df, aes(x = iteration, y = theil_total)) + 
-    geom_line(aes(y = theil_overall, group = sim_id, color = theil_increased), alpha = 0.45) +
-    scale_color_manual(values = c("h_increased" = "steelblue4", "h_decreased" = "tomato")) + 
-    geom_line(linewidth = 2, alpha = 0.75) +
-    geom_labelpath(linewidth = 1.5,
-                   label = str_c("MEAN CHANGE: ", theil_diff), 
-                   stat = "smooth",
-                   color = "violetred4",
-                   family = "Roboto",
-                   size = 3.5,
-                   hjust = 0.8) +
-    labs(x = "Iteration", y = "Theil index", 
-         title = "Theil over time",
-         subtitle = str_c("Change in segregation between 100 organizations time with an agent (A/B) ratio of ", agent_ratio_str,
-                          "\nThese are the results of ", length(batch), " simulations.")) +
-    theme_minimal() + 
+  p <- ggplot(combined_df, aes(x = iteration, y = theil_total)) + 
+            geom_line(aes(y = theil_overall, group = sim_id, color = theil_increased), alpha = 0.45) +
+            scale_color_manual(values = c("h_increased" = "steelblue4", "h_decreased" = "tomato")) + 
+            #geom_line(linewidth = 2, alpha = 0.75) +
+            geom_textpath(linewidth = 1.5,
+                           label = str_c("mean change: ", theil_diff), 
+                           stat = "smooth",
+                           color = "black",
+                           family = "Roboto Bold",
+                           size = 4,
+                           hjust = 0.25) +
+            labs(x = "Iteration", y = "Theil index", 
+                 title = "Theil over time",
+                 subtitle = str_c("Change in segregation between 100 organizations time with an agent (A/B) ratio of ", agent_ratio_str,
+                                  "\nThese are the results of ", length(batch), " simulations.")) +
+            theme_minimal() + 
+            theme(legend.position = "none",
+                  text = element_text(family = "Roboto"),
+                  plot.title = element_text(face = "bold",
+                                            size = rel(1.5)),
+                  axis.text = element_text(family = "Roboto", size = 10)) + 
+            ylim(0.025, 0.13)
+  
+  return(p)
+}
+
+
+# Saving for print and presentations - NEED WORK ------------------------------------------------------------------
+
+save_plot_print <- function(plot) {
+  plot <- plot +     
+    theme(legend.position = "none",
+          text = element_text(family = "Roboto"),
+          plot.title = element_text(face = "bold",
+          size = rel(1.5)),
+          axis.text = element_text(family = "Roboto"))
+  
+  ggsave()
+}
+
+save_plot_ppt <- function(plot) {
+  plot <- plot +     
     theme(legend.position = "none",
           text = element_text(family = "Roboto"),
           plot.title = element_text(face = "bold",
                                     size = rel(1.5)),
-          axis.text = element_text(family = "Roboto")) + 
-    ylim(0.025, 0.125)
+          axis.text = element_text(family = "Roboto"))
+  
+  ggsave()
 }
-
-

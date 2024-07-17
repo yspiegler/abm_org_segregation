@@ -23,25 +23,25 @@ source("src/calculate_segregation.R")
 #write_rds(output_50, "out/output50.rds")
 
 # 100 orgs, 100 iterations, 100 simulations
-output100_empty <- run_sim_batch(100, 0.61, 0.39, FALSE)
-output100_61 <- run_sim_batch(100, 0.61, 0.39, TRUE)
-output100_40 <- run_sim_batch(100, 0.4, 0.6, TRUE)
-output100_50 <- run_sim_batch(100, 0.5, 0.5, TRUE)
+out_nopref <- run_sim_batch(100, 0.61, 0.39, FALSE)
+out_61 <- run_sim_batch(100, 0.61, 0.39, TRUE)
+out_40 <- run_sim_batch(100, 0.4, 0.6, TRUE)
+out_50 <- run_sim_batch(100, 0.5, 0.5, TRUE)
 
-write_rds(output100_empty, "out/100org_output61_nopref.rds")
-write_rds(output100_61, "out/100org_output61.rds")
-write_rds(output100_40, "out/100org_output40.rds")
-write_rds(output100_50, "out/100org_output50.rds")
+write_rds(out_nopref, "out/100org_output61_nopref.rds")
+write_rds(out_61, "out/100org_output61.rds")
+write_rds(out_40, "out/100org_output40.rds")
+write_rds(out_50, "out/100org_output50.rds")
 
 
 # Plot simulation outcomes ----------------------------------------------------------------------------------------
 
-plot_batch_dissimilarity(output100_empty, "The ratio between agents A/B is 61/39. Base model (no pref.)")
-plot_batch_dissimilarity(output100_61, "The ratio between agents A/B is 61/39.")
-plot_batch_dissimilarity(output100_40, "The ratio between agents A/B is 40/60.")
-plot_batch_dissimilarity(output100_50, "The ratio between agents A/B is 50/50.")
+plot_batch_dissimilarity(out_nopref, "61/39. [no pref. models]")
+plot_batch_dissimilarity(out_61, "61/39.")
+plot_batch_dissimilarity(out_40, "40/60.")
+plot_batch_dissimilarity(out_50, "50/50.")
 
-plot_batch_theil(output100_empty, "The ratio between agents A/B is 61/39. Base model (no pref.)")
-plot_batch_theil(output100_61, "The ratio between agents A/B is 61/39.")
-plot_batch_theil(output100_40, "The ratio between agents A/B is 40/60.")
-plot_batch_theil(output100_50, "The ratio between agents A/B is 50/50.")
+plot_batch_theil(out_nopref, "61/39. [no pref. models]")
+plot_batch_theil(out_61, "61/39.")
+plot_batch_theil(out_40, "40/60.")
+plot_batch_theil(out_50, "50/50.")
