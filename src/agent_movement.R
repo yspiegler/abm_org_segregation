@@ -3,7 +3,7 @@ library(data.table)
 
 
 # Move all relevant agents
-move_agents <- function(agents, happy_if_stayed = 3, have_prerefernce = TRUE) {
+move_agents <- function(agents, happy_if_stayed = 3, have_prerefernce = TRUE, deterministic = FALSE) {
   
   # Get the IDs of all non-empty agents still looking to move
   agent_ids <- agents[type != "empty" & n_stay <= happy_if_stayed, position_id]
@@ -26,7 +26,7 @@ move_agents <- function(agents, happy_if_stayed = 3, have_prerefernce = TRUE) {
     position <- agents[type == "empty" & org != agent_org & tier == agent_tier, .SD[sample(.N, 1)]]
     
     if (nrow(position) == 1) {
-      agents <- move_agent(agents, agent, position, have_prerefernce)
+      agents <- move_agent(agents, agent, position, have_prerefernce, deterministic)
     } else {
       print(agent)
       print(position)
@@ -39,14 +39,14 @@ move_agents <- function(agents, happy_if_stayed = 3, have_prerefernce = TRUE) {
 
 
 # Move a single agent
-move_agent <- function(agents, agent, position, have_preference = TRUE) {
+move_agent <- function(agents, agent, position, have_preference = TRUE, deterministic = FALSE) {
   # Get surrounding workers in org hierarchy
   neighbors_0 <- get_rel_hierarchy(agents, agent)  
   neighbors_1 <- get_rel_hierarchy(agents, position)
   
   # Make a choice - stay, or move
   if (have_preference) {
-    choice <- choose_position(agent$type, agent$tier, neighbors_0, neighbors_1)
+    choice <- choose_position(agent$type, agent$tier, neighbors_0, neighbors_1, deterministic)
   } else {
     choice <- sample(c("stay", "move"), 1)
   }
@@ -110,7 +110,7 @@ get_rel_hierarchy <- function(agents, agent, summarize_data = TRUE) {
 
 # give the agent type and tier, calculate the relative utilities of the current (h0) and offered (h1) positions
 # and make a choice = "stay" or "move" [v]
-choose_position <- function(agent_type, agent_tier, h0, h1) {
+choose_position <- function(agent_type, agent_tier, h0, h1, deterministic = FALSE) {
   
   # Adjust tiers based on agent tier
   if (agent_tier == 1) {
@@ -146,6 +146,15 @@ choose_position <- function(agent_type, agent_tier, h0, h1) {
   prob_stay <- h0_util_exp / (h0_util_exp + h1_util_exp)
   
   # Choose
-  choose <- sample(c("stay", "move"), size = 1, prob = c(prob_stay, 1 - prob_stay))
+  ## if the choice is deterministic, than even a slight preference towards one side will tip the choice
+  ## e.g., if the probability of staying is 50.1%, the agent will stay 100% of times.
+  ## If choice is not deterministic, than the relative probability of will shift the choice probability,
+  ## but even a 99% preference in staying can wind up moving.
+  if(deterministic) {
+    choose <- ifelse(prob_stay > 0.5, "stay", "move")
+  } else {
+    choose <- sample(c("stay", "move"), size = 1, prob = c(prob_stay, 1 - prob_stay))  
+  }
+  
   return(choose)
 }

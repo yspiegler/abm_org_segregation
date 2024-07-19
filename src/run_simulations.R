@@ -34,7 +34,7 @@ setDT(effects)
 # @agent_preferences = TRUE = use the 'effects' data above for the agent preferences. If FALSE, choice is random.
 run_sim <- function(org_structure = c(1,3,9), n_orgs = 50, prop_a_t1, prop_a_t2, prop_a_t3, 
                     prop_b_t1, prop_b_t2, prop_b_t3, prop_empty = 0.1, 
-                    exact_prop = TRUE, agent_preferences = TRUE, n_iterations = 100) {
+                    exact_prop = TRUE, agent_preferences = TRUE, n_iterations = 100, deterministic = FALSE) {
   
   # initialize agents
   agents <- initialize_agents_tiered(org_structure, n_orgs, prop_a_t1, prop_a_t2, prop_a_t3, 
@@ -61,7 +61,7 @@ run_sim <- function(org_structure = c(1,3,9), n_orgs = 50, prop_a_t1, prop_a_t2,
   for (i in 2:n_iterations ) {
     # calculate agent movement for a single itteration
     tic(str_c("=============== ITERATION ", i))
-    agents <- move_agents(agents, 3, have_prerefernce = agent_preferences) ### HERE YOU MAKE SURE PREF = TRUE. FALSE WILL BE RANDOM CHOICE
+    agents <- move_agents(agents, 3, have_prerefernce = agent_preferences, deterministic = deterministic) ### HERE YOU MAKE SURE PREF = TRUE. FALSE WILL BE RANDOM CHOICE
     
     # calculate outcomes
     outcome_df[i,]$dis_overall <- calc_dissimilarity(agents)
@@ -81,7 +81,7 @@ run_sim <- function(org_structure = c(1,3,9), n_orgs = 50, prop_a_t1, prop_a_t2,
 
 # Run multiple models (n_sims) with the same agent A and B proportions.
 # This function is parallelized
-run_sim_batch <- function(n_sims, prop_a, prop_b, use_preferences = TRUE) {
+run_sim_batch <- function(n_sims, prop_a, prop_b, use_preferences = TRUE, deterministic = FALSE) {
   
   print(str_c("====================== started sim batch with ", n_sims, " simulations"))
   print(timestamp())
@@ -99,7 +99,7 @@ run_sim_batch <- function(n_sims, prop_a, prop_b, use_preferences = TRUE) {
       
       out <- run_sim(org_structure = c(1,3,9), n_orgs =  100, prop_a_t1 = prop_a, prop_a_t2 = prop_a, prop_a_t3 = prop_a, 
                      prop_b_t1 = prop_b, prop_b_t2 = prop_b, prop_b_t3 = prop_b, 
-                     prop_empty = 0.05, exact_prop = TRUE, agent_preferences = use_preferences)
+                     prop_empty = 0.05, exact_prop = TRUE, agent_preferences = use_preferences, deterministic = deterministic)
       
       out
     }
