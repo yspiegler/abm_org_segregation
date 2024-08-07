@@ -44,7 +44,7 @@ run_sim <- function(org_structure = c(1,3,9), n_orgs = 50, prop_a_t1, prop_a_t2,
   #set agents as a data table
   setDT(agents)
   
-  # initialize outcome (dissimilarity) table
+  # initialize outcome (segregation measures) table
   outcome_df <- data.frame(dis_overall   = numeric(n_iterations),
                            dis_tier2     = numeric(n_iterations),
                            dis_tier3     = numeric(n_iterations),
@@ -55,13 +55,11 @@ run_sim <- function(org_structure = c(1,3,9), n_orgs = 50, prop_a_t1, prop_a_t2,
   outcome_df[1,]$dis_tier2 <- calc_dissimilarity(agents, calc_tier = 2)
   outcome_df[1,]$dis_tier3 <- calc_dissimilarity(agents, calc_tier = 3)
   
-  #print(str_c("Iteration ", 1, " | Dissimilaity: ", outcome_df[1,]$dis_overall))
-  
   # run the model iterations
   for (i in 2:n_iterations ) {
-    # calculate agent movement for a single itteration
+    # calculate agent movement for a single iteration
     tic(str_c("=============== ITERATION ", i))
-    agents <- move_agents(agents, 3, have_prerefernce = agent_preferences, deterministic = deterministic) ### HERE YOU MAKE SURE PREF = TRUE. FALSE WILL BE RANDOM CHOICE
+    agents <- move_agents(agents, 3, have_prerefernce = agent_preferences, deterministic = deterministic)
     
     # calculate outcomes
     outcome_df[i,]$dis_overall <- calc_dissimilarity(agents)
@@ -91,12 +89,13 @@ run_sim_batch <- function(n_sims, prop_a, prop_b, use_preferences = TRUE, determ
   registerDoParallel(cl)
   
   # run batch
+  ## foreach is a version of for loop that can work on multiple cores. Since this creates a new environment on each,
+  ## all relevant packages need to be loaded on each environment, and the same goes to all supplementary functions (.export)
   simulations <- foreach(i = 1:n_sims, 
                          .packages = c("stringr", "tidyverse", "data.table", "tictoc"), 
                          .export = c("run_sim", "initialize_agents_tiered", "calc_dissimilarity", "calc_theil", "calc_entropy", 
                                      "choose_position", "get_rel_hierarchy", "move_agent", "move_agents", "effects")) %dopar% 
     {
-      
       out <- run_sim(org_structure = c(1,3,9), n_orgs =  100, prop_a_t1 = prop_a, prop_a_t2 = prop_a, prop_a_t3 = prop_a, 
                      prop_b_t1 = prop_b, prop_b_t2 = prop_b, prop_b_t3 = prop_b, 
                      prop_empty = 0.05, exact_prop = TRUE, agent_preferences = use_preferences, deterministic = deterministic)

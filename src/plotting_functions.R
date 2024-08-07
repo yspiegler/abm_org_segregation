@@ -1,5 +1,6 @@
 library(ggplot2)
 library(ggtext)
+library(patchwork)
 
 
 ######################################################
@@ -91,6 +92,17 @@ plot_batch_theil <- function(batch, agent_ratio_str, preferences = TRUE, plot_al
     pct_down, "% of simulations</span> decreased**.<br>",
     "**Overall, the mean change in segregation is ", theil_diff, "**.</span>")
   
+  ci_manual <- tibble(ci_low = double(length = nrow(combined_df)), ci_high = double(length = nrow(combined_df)))
+  
+  for (i in 2:nrow(combined_df)) {
+    test_values <- map_dbl(out_61, ~ .x[i, 4])
+    ci <- Hmisc::smean.cl.normal(test_values)
+    a[(i-1), 1] <- ci[[2]]
+    a[(i-1), 2] <- ci[[3]]
+  }
+  
+  combined_df <- bind_cols(combined_df, ci_manual)
+  
   #DO THE PLOTTING! :)
   p <- ggplot(combined_df, aes(x = iteration, y = theil_overall))
   
@@ -99,19 +111,12 @@ plot_batch_theil <- function(batch, agent_ratio_str, preferences = TRUE, plot_al
       geom_line(aes(y = theil_overall, group = sim_id, color = theil_increased), alpha = 0.35) +
       scale_color_manual(values = c("h_increased" = "steelblue4", "h_decreased" = "tomato"))
   } 
-  p <- p +  #stat_summary(geom = "smooth", 
-            #             fun.data = mean_cl_normal,
-            #             fun.args = list(conf.int = 0.95),
-            #             group = 1,
-            #             alpha = .5,
-            #             color = "black",
-            #             fill = "darkgrey",
-            #             se = TRUE) +
-            geom_smooth() + 
+  p <- p +  geom_smooth(data = combined_df, aes(x = iteration, y = theil_overall)) + 
             labs(x = "Iteration", y = "Theil index", 
                  title = str_c("Between-organization segregation (Theil) change over time, ", pref_txt),
                  subtitle = subtitle_str) + 
-            theme_minimal() 
+            theme_minimal() +
+    geom_ribbon(aes(ymin = ci_low, ymax = ci_high), alpha = 0.35, fill = "grey")
   
   return(p)
 }
