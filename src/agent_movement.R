@@ -91,7 +91,7 @@ get_rel_hierarchy <- function(agents, agent, summarize_data = TRUE) {
     rh <- agents[org == agent_org & tier == 2]
   }
   if (agent_tier == 2) {
-    rh <- agents[org == agent_org & (tier != 3 | (tier == 3 & vert_group == agent_tier))]
+    rh <- agents[org == agent_org & (tier != 3 | (tier == 3 & vert_group == agent_group))]
   }
   if (agent_tier == 3) {
     rh <- agents[org == agent_org & vert_group == agent_group]
